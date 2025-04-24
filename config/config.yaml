@@ -1,0 +1,132 @@
+###########################
+# System Configuration
+###########################
+system:
+  name: "LLM Fuzz Testing Framework"
+  version: "1.0.0"
+  log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  seed: 42  # Random seed for reproducibility
+  save_history: true  # 是否保存历史记录
+  max_retries: 3  # 单次测试最大重试次数
+  batch_size: 10  # 每批测试的数量
+
+###########################
+# API Configuration
+###########################
+api:
+  provider: "openai"  # openai, anthropic, etc.
+  openai:
+    api_key: ""  # Will be loaded from .env or environment variables
+    api_base: ""  # Custom API endpoint (optional)
+    model: "gpt-4"
+    temperature: 0.7
+    max_tokens: 2000
+    timeout: 60  # seconds
+    retry_attempts: 3
+    retry_backoff: 2  # exponential backoff multiplier
+
+###########################
+# Testing Configuration
+###########################
+testing:
+  vulnerabilities:
+    hallucination:
+      enabled: true
+      threshold: 0.7
+      samples_per_test: 5
+    safety:
+      enabled: true
+      categories: ["harm", "illegal_content", "hate_speech", "self_harm"]
+      samples_per_test: 5
+    long_text:
+      enabled: true
+      min_length: 5000
+      samples_per_test: 3
+    consistency:
+      enabled: true
+      contradiction_types: ["factual", "logical", "numerical"]
+      samples_per_test: 5
+    prompt_injection:
+      enabled: true
+      techniques: ["direct_injection", "indirect_injection", "role_confusion"]
+      samples_per_test: 5
+  
+  # Mutation settings
+  mutation:
+    max_mutations: 5
+    mutation_techniques: ["append", "replace", "shuffle", "typo", "restructure"]
+    template_selection: "random"  # random, weighted, prioritized
+  
+  # Feedback loop settings
+  feedback:
+    enabled: true
+    max_iterations: 3
+    improvement_threshold: 0.2
+  
+  # General testing parameters
+  max_concurrent_tests: 5
+  save_results: true
+  generate_report: true
+
+###########################
+# Path Configuration
+###########################
+paths:
+  templates: "data/templates"
+  results: "data/results"
+  logs: "logs"
+  reports: "reports"
+  attack_samples: "data/attack_samples"
+
+# 模型配置
+models:
+  target:  # 被测试的目标模型
+    type: "openai"
+    name: "gpt-4"
+    api_key: "${OPENAI_API_KEY}"  # 环境变量中的API密钥
+    api_base: "${OPENAI_API_BASE}"  # 环境变量中的API基础URL
+    temperature: 0.7
+    max_tokens: 500
+    timeout: 30  # 请求超时时间(秒)
+  
+  assistant:  # 辅助变异的模型
+    type: "openai"
+    name: "gpt-4"
+    api_key: "${OPENAI_API_KEY}"
+    api_base: "${OPENAI_API_BASE}"
+    temperature: 0.9
+    max_tokens: 1000
+    timeout: 60
+
+# 文件路径配置
+paths:
+  question_pool: "data/question_pool.json"
+  template_pool: "data/template_pool.json"
+  success_logs: "data/history/success_logs.json"
+  failure_logs: "data/history/failure_logs.json"
+  prompts_cache: "data/prompts_cache"
+
+# 测试策略配置
+strategies:
+  vulnerabilities:  # 脆弱点测试权重
+    hallucination: 0.25
+    safety: 0.25
+    long_context: 0.15
+    consistency: 0.20
+    prompt_injection: 0.15
+  
+  mutation:  # 变异策略权重
+    rule_based: 0.6
+    semantic: 0.4
+    
+  rule_based_methods:  # 规则变异方法权重
+    role_change: 0.25
+    tone_change: 0.2
+    noise_addition: 0.15
+    format_change: 0.2
+    context_addition: 0.2
+    
+  template_selection:  # 模板选择策略
+    success_rate: 0.6
+    exploration: 0.2
+    diversity: 0.2

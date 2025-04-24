@@ -1,0 +1,50 @@
+# 忽视环境配置文件
+.env
+.env.local
+.env.*.local
+
+# 忽视 node_modules（针对 Node.js 项目）
+node_modules/
+
+# 忽视 Python 缓存文件
+__pycache__/
+*.py[cod]
+*.pyo
+
+# 忽视日志和调试输出
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 忽视 IDE 和编辑器配置
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# 忽视系统文件
+.DS_Store
+Thumbs.db
+
+# 忽视构建输出
+dist/
+build/
+
+# 忽视虚拟环境（针对 Python 项目）
+venv/
+.env/
+.env.bak/
+
+# 忽视数据库文件
+*.sqlite3
+*.db
+
+# 忽视打包缓存
+*.tar.gz
+*.egg-info/
+
+# 忽视测试覆盖率输出
+.coverage
+htmlcov/
+coverage.xml
