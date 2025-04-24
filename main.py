@@ -10,7 +10,7 @@ from utils.logger import Logger
 from utils.file_manager import FileManager
 
 # 配置根日志
-logging.basicConfig(level=logging.INFO, 
+logging.basicConfig(level=logging.DEBUG, 
                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 

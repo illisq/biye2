@@ -52,7 +52,10 @@ class Injector:
         Returns:
             Tuple[str, str, float]: (提示文本, 模型响应, 响应延迟)
         """
-        logger.info("步骤4.1: 将问题注入到模板中")
+        self.logger.info("=" * 60)
+        self.logger.info("步骤4.1: 将问题注入到模板中")
+        self.logger.info("=" * 60)
+        
         # 构建提示
         template_content = template.get('content', '')
         question_content = question.get('content', '')
@@ -62,23 +65,66 @@ class Injector:
         
         # 构建提示
         prompt = self.prompt_builder.build_prompt(template_content, question_content, field)
-        logger.info(f"构建的提示: {prompt}")
+        
+        # 详细记录问题和模板信息
+        self.logger.info("问题详情:")
+        self.logger.info(f"内容: {question_content}")
+        self.logger.info(f"ID: {question.get('id', 'unknown')}")
+        if 'fact' in question:
+            self.logger.info(f"事实: {question.get('fact', '')}")
+            
+        self.logger.info("模板详情:")
+        self.logger.info(f"ID: {template.get('id', 'unknown')}")
+        self.logger.info(f"内容: {template_content}")
+        
+        self.logger.info("生成的完整提示:")
+        self.logger.info("-" * 40)
+        self.logger.info(prompt)
+        self.logger.info("-" * 40)
         
         # 缓存提示（用于复现和分析）
         self._cache_prompt(prompt, template.get('id', 'unknown'), question.get('id', 'unknown'))
         
-        logger.info("步骤4.2: 发送提示到目标模型")
+        self.logger.info("=" * 60)
+        self.logger.info("步骤4.2: 发送提示到目标模型")
+        self.logger.info("=" * 60)
+        
+        # 记录目标模型信息
+        model_name = self.target_model.model_name
+        model_type = self.target_model.model_type
+        self.logger.info(f"目标模型: {model_type}/{model_name}")
+        
         # 向模型发送提示，测量响应时间
         start_time = time.time()
-        response, latency = self.target_model.generate_response(prompt)
+        response, _ = self.target_model.generate_response(prompt)
         end_time = time.time()
         
         # 计算延迟
         latency = end_time - start_time
         
-        # 截断日志中的响应文本（避免过长）
-        log_response = response[:100] + "..." if len(response) > 100 else response
-        logger.info(f"模型响应 (延迟: {latency:.2f}秒): {log_response}")
+        # 完整记录响应
+        self.logger.info(f"模型响应 (延迟: {latency:.2f}秒):")
+        self.logger.info("-" * 40)
+        self.logger.info(response)
+        self.logger.info("-" * 40)
+        
+        # 记录详细测试数据
+        test_data = {
+            "question_id": question.get('id', 'unknown'),
+            "question_content": question_content,
+            "template_id": template.get('id', 'unknown'),
+            "template_content": template_content,
+            "prompt": prompt,
+            "response": response,
+            "latency": latency,
+            "model": f"{model_type}/{model_name}"
+        }
+        
+        if 'fact' in question:
+            test_data["fact"] = question.get('fact', '')
+            
+        # 使用Logger记录详细测试信息
+        self.logger.log_detailed_test(test_data)
         
         return prompt, response, latency
     

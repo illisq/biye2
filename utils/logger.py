@@ -24,7 +24,7 @@ class Logger:
                 log_level = 'INFO'  # 默认使用INFO级别
         
         # 设置日志级别
-        level = getattr(logging, log_level.upper(), logging.INFO)
+        level = getattr(logging, log_level.upper(), logging.DEBUG)
         self.logger.setLevel(level)
         
         # 如果已经有处理器，则不重复添加
@@ -34,13 +34,13 @@ class Logger:
         # 创建日志目录
         os.makedirs(log_dir, exist_ok=True)
         
-        # 创建控制台处理器
+        # 创建控制台处理器 - 简洁格式，适合快速浏览
         console_handler = logging.StreamHandler()
         console_handler.setLevel(level)
-        console_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        console_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         console_handler.setFormatter(console_format)
         
-        # 创建文件处理器
+        # 创建详细文件处理器 - 详细格式，记录完整信息
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         log_file = os.path.join(log_dir, f"fuzz_{timestamp}.log")
         file_handler = logging.FileHandler(log_file, encoding='utf-8')
@@ -60,7 +60,8 @@ class Logger:
         Args:
             message: 日志消息
         """
-        self.logger.debug(message)
+        # 支持多行内容
+        self._log_multiline(self.logger.debug, message)
     
     def info(self, message):
         """记录一般信息
@@ -68,7 +69,8 @@ class Logger:
         Args:
             message: 日志消息
         """
-        self.logger.info(message)
+        # 支持多行内容
+        self._log_multiline(self.logger.info, message)
     
     def warning(self, message):
         """记录警告信息
@@ -76,7 +78,8 @@ class Logger:
         Args:
             message: 日志消息
         """
-        self.logger.warning(message)
+        # 支持多行内容
+        self._log_multiline(self.logger.warning, message)
     
     def error(self, message):
         """记录错误信息
@@ -84,7 +87,8 @@ class Logger:
         Args:
             message: 日志消息
         """
-        self.logger.error(message)
+        # 支持多行内容
+        self._log_multiline(self.logger.error, message)
     
     def critical(self, message):
         """记录严重错误信息
@@ -92,7 +96,33 @@ class Logger:
         Args:
             message: 日志消息
         """
-        self.logger.critical(message)
+        # 支持多行内容
+        self._log_multiline(self.logger.critical, message)
+    
+    def _log_multiline(self, log_func, message):
+        """处理多行日志内容
+        
+        对多行内容进行逐行记录，保持正确的缩进和格式
+        
+        Args:
+            log_func: 日志函数 (debug, info, etc.)
+            message: 日志消息
+        """
+        if not message:
+            return
+            
+        # 检查是否为多行内容
+        if '\n' in str(message):
+            lines = str(message).split('\n')
+            # 记录第一行
+            log_func(lines[0])
+            # 后续行添加缩进以保持格式
+            for line in lines[1:]:
+                if line.strip():  # 只记录非空行
+                    log_func(f"    {line}")
+        else:
+            # 单行内容直接记录
+            log_func(message)
         
     def log_attack_attempt(self, template_id, question_id, prompt, is_success=False):
         """记录攻击尝试
@@ -105,7 +135,10 @@ class Logger:
         """
         status = "成功" if is_success else "失败"
         self.logger.info(f"攻击尝试 [{status}] - 模板ID: {template_id}, 问题ID: {question_id}")
-        self.logger.debug(f"攻击提示: {prompt}")
+        self.info("提示内容:")
+        self.info("=" * 40)
+        self.info(prompt)
+        self.info("=" * 40)
         
     def log_model_response(self, response, latency):
         """记录模型响应
@@ -114,13 +147,10 @@ class Logger:
             response: 模型响应文本
             latency: 响应延迟（秒）
         """
-        # 截断过长的响应
-        if len(response) > 500:
-            response_text = response[:500] + "... [截断]"
-        else:
-            response_text = response
-            
-        self.logger.debug(f"模型响应 (延迟: {latency:.2f}s): {response_text}")
+        self.info(f"模型响应 (延迟: {latency:.2f}秒):")
+        self.info("=" * 40)
+        self.info(response)
+        self.info("=" * 40)
         
     def log_mutation(self, original_template_id, new_template_id, strategies):
         """记录模板变异信息
@@ -131,3 +161,41 @@ class Logger:
             strategies: 使用的变异策略列表
         """
         self.logger.info(f"模板变异: {original_template_id} → {new_template_id}, 策略: {', '.join(strategies)}")
+    
+    def log_detailed_test(self, test_data):
+        """记录详细测试结果
+        
+        Args:
+            test_data: 包含测试详情的字典
+        """
+        self.info("=" * 80)
+        self.info("详细测试信息")
+        self.info("=" * 80)
+        
+        # 记录问题信息
+        self.info("问题信息:")
+        self.info(f"ID: {test_data.get('question_id', 'unknown')}")
+        self.info(f"内容: {test_data.get('question_content', 'unknown')}")
+        if 'fact' in test_data:
+            self.info(f"事实: {test_data.get('fact', 'unknown')}")
+            
+        # 记录模板信息
+        self.info("\n模板信息:")
+        self.info(f"ID: {test_data.get('template_id', 'unknown')}")
+        self.info(f"内容: {test_data.get('template_content', 'unknown')}")
+        
+        # 记录完整提示
+        self.info("\n完整提示:")
+        self.info(test_data.get('prompt', 'unknown'))
+        
+        # 记录完整响应
+        self.info("\n完整响应:")
+        self.info(test_data.get('response', 'unknown'))
+        
+        # 记录评估结果
+        self.info("\n评估结果:")
+        self.info(f"成功: {test_data.get('success', False)}")
+        self.info(f"原因: {test_data.get('reason', 'unknown')}")
+        self.info(f"置信度: {test_data.get('confidence', 0):.2f}")
+        
+        self.info("=" * 80)

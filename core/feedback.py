@@ -1,6 +1,7 @@
 import json
 from utils import file_manager
 import logging
+import os
 from typing import Dict, Any, List, Optional, Tuple
 
 from utils.file_manager import FileManager
@@ -48,6 +49,12 @@ class Feedback:
         self.success_logs = FileManager.load_json(config['paths']['success_logs'])
         if self.success_logs is None:
             self.success_logs = []
+        
+        # 检查是否存在幻觉数据集
+        self.hallucination_dataset_path = "data/hallucination_dataset.json"
+        self.has_hallucination_dataset = os.path.exists(self.hallucination_dataset_path)
+        if self.has_hallucination_dataset:
+            self.logger.info("检测到幻觉数据集文件存在")
     
     def record_attack_result(self, is_success: bool, template: Dict[str, Any], question: Dict[str, Any], 
                             prompt: str, response: str, success_reason: str = "", confidence: float = 0.0) -> bool:
@@ -164,6 +171,10 @@ class Feedback:
         Returns:
             bool: 更新是否成功
         """
+        # 首先检查是否是TruthfulQA数据集问题(ID以't'开头)
+        if question_id.startswith('t') and self.has_hallucination_dataset:
+            return self._update_hallucination_dataset_stats(question_id, is_success)
+            
         try:
             # 加载问题池
             question_pool = FileManager.load_json(self.config['paths']['question_pool'])
@@ -204,6 +215,58 @@ class Feedback:
             return result
         except Exception as e:
             logger.error(f"更新问题统计信息时发生错误: {e}")
+            return False
+    
+    def _update_hallucination_dataset_stats(self, question_id: str, is_success: bool) -> bool:
+        """更新幻觉数据集中问题的统计信息
+        
+        Args:
+            question_id: 问题ID
+            is_success: 攻击是否成功
+            
+        Returns:
+            bool: 更新是否成功
+        """
+        try:
+            # 加载幻觉数据集
+            hallucination_dataset = FileManager.load_json(self.hallucination_dataset_path)
+            if not hallucination_dataset:
+                logger.error("无法加载幻觉数据集")
+                return False
+                
+            # 在所有类别中查找问题
+            found = False
+            for category, questions in hallucination_dataset.items():
+                for question in questions:
+                    if question.get('id') == question_id:
+                        # 更新测试计数
+                        question['test_count'] = question.get('test_count', 0) + 1
+                        
+                        # 更新成功计数
+                        if is_success:
+                            question['success_count'] = question.get('success_count', 0) + 1
+                        
+                        found = True
+                        break
+                
+                if found:
+                    break
+            
+            if not found:
+                logger.warning(f"未在幻觉数据集中找到问题 ID: {question_id}")
+                return False
+                
+            # 保存更新后的幻觉数据集
+            result = FileManager.save_json(hallucination_dataset, self.hallucination_dataset_path)
+            
+            if result:
+                logger.debug(f"已更新幻觉数据集中问题统计信息，ID: {question_id}, 成功: {is_success}")
+            else:
+                logger.error(f"更新幻觉数据集中问题统计信息失败，ID: {question_id}")
+                
+            return result
+        except Exception as e:
+            logger.error(f"更新幻觉数据集中问题统计信息时发生错误: {e}")
             return False
     
     def get_template_failure_count(self, template_id: str) -> int:
